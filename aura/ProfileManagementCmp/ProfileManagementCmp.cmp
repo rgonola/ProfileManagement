@@ -1,0 +1,658 @@
+<aura:component implements="flexipage:availableForAllPageTypes,force:appHostable" controller="fetchPicklistOptsController">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    <aura:attribute name="spinner" type="boolean" default="FALSE"/>
+    <aura:attribute name="optionsList" type="List"/>
+    <aura:attribute name="folderList" type="List"/>
+    <aura:attribute name="groupNameList" type="List"/>
+    <aura:attribute name="dashboardFolderList" type="List"/>
+    <aura:attribute name="profileOptionList" type="List"/>
+    <aura:attribute name="objInfo" type="String" />
+    <aura:attribute name="objectPermissions" type="ObjectPermissions[]" />
+    <aura:attribute name="worflows" type="ProfileLayoutCls.cls_records[]" />
+    <aura:attribute name="reportData" type="ReportInformation[]"/>
+    <aura:attribute name="dashboardData" type="Dashboard[]"/>
+     <aura:attribute name="groupUserData" type="User[]"/>
+    <aura:attribute name="validationRules" type="ProfileLayoutCls.cls_records[]" />
+    <aura:attribute name="customButtons" type="WebLink[]" />
+    <aura:attribute name="apexPages" type="List[]" />
+    <aura:attribute name="selectedObjPerm" type="String" />
+    <aura:attribute name="fieldPermissions" type="FieldPermissions[]" />
+    <aura:attribute name="selectedfldPerm" type="String" />
+    <aura:attribute name="selectedTable1" type="String"/>
+    <aura:attribute name="isDisabled" type="boolean" default = "false"/>
+    <aura:attribute name="selectedLayout" type="String"/>
+    <aura:attribute name="selectedTable" type="String"/>
+    <aura:attribute name="selectedFolder" type="String"/>
+    <aura:attribute name="selectedGroup" type="String"/>
+    <aura:attribute name="selectedDahboardFolder" type="String"/>
+    <aura:attribute name="profileLayouts" type="ProfileLayoutCls.cls_records[]"/>
+    <aura:attribute name="processBuilders" type="ProcessBuilderMetaData.cls_records[]"/>
+    <aura:attribute name="selTabId" type="String" default="tab1" />
+    <!--loading spinner start-->
+    <aura:if isTrue="{!v.spinner}">
+        <div aura:id="spinnerId" class="slds-spinner_container">
+            <div class="slds-spinner--brand  slds-spinner slds-spinner--large slds-is-relative" role="alert">
+                <span class="slds-assistive-text">Loading...</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </aura:if>
+    <!-- Loading spinner end-->   
+    <lightning:tabset onselect="{!c.onTabSelected}" variant="default" selectedTabId="{!v.selTabId}">
+        <lightning:tab aura:id = "tab1" tabindex="1" id="tab1" label="Object Permissions">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Select Profile Name : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect  aura:id="profileName" class="slds-select"  change="{!c.onPicklistChange}"/>-->
+                    <lightning:select aura:id="profileName" label ="Profile Name :" name="profileItem" onchange="{!c.onPicklistChange}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.profileOptionList}" var="option">
+                                <option value="{!option.value}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onObjectPermDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="Object ID">Object ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Profile Name">Profile Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Object Name">Object Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Create Permissions">Create Permissions</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Delete Permissions">Delete Permissions</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Edit Permissions">Edit Permissions</div></th>
+                                <th scope="col"><div class="slds-truncate" title="ModifyAll Permissions">ModifyAll Permissions</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Read Permissions">Read Permissions</div></th>
+                                <th scope="col"><div class="slds-truncate" title="ViewAllRecords Permissions">ViewAll Permissions</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.objectPermissions}" var="objPermission">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!objPermission.Id}">{!objPermission.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!objPermission.Parent.Profile.Name}">{!objPermission.Parent.Profile.Name}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.SobjectType}">{!objPermission.SobjectType}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.PermissionsCreate}">{!objPermission.PermissionsCreate}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.PermissionsDelete}">{!objPermission.PermissionsDelete}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.PermissionsEdit}">{!objPermission.PermissionsEdit}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.PermissionsModifyAllRecords}">{!objPermission.PermissionsModifyAllRecords}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.PermissionsRead}">{!objPermission.PermissionsRead}</div></td>
+                                    <td><div class="slds-truncate" title="{!objPermission.PermissionsViewAllRecords}">{!objPermission.PermissionsViewAllRecords}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        <lightning:tab aura:id = "tab2" tabindex="2" id="tab2" label="Field Permissions">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Object Name : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="tableName1" class="slds-select"  change="{!c.onTableNameChange1}"/>-->
+                        <lightning:select aura:id="tableName1" label ="Object Name :" name="selectItem" onchange="{!c.onTableNameChange1}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.optionsList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+
+                    
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Profile Name : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="profileName1" class="slds-select"  change="{!c.onPicklistChange1}"/>-->
+                        <lightning:select aura:id="profileName1" label ="Profile Name :" name="profileItem" onchange="{!c.onPicklistChange1}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.profileOptionList}" var="option">
+                                <option value="{!option.value}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                                        
+                    <lightning:layoutItem size="4">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onFldPermDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportFieldPermissionCsv}"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="Field ID">Field ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Field">Field</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Object Name">Object Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Edit Permissions">Edit Permissions</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Read Permissions">Read Permissions</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.fieldPermissions}" var="fldPermission">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!fldPermission.Id}">{!fldPermission.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!fldPermission.Field}">{!fldPermission.Field}</div></td>
+                                    <td><div class="slds-truncate" title="{!fldPermission.SobjectType}">{!fldPermission.SobjectType}</div></td>
+                                    <td><div class="slds-truncate" title="{!fldPermission.PermissionsEdit}">{!fldPermission.PermissionsEdit}</div></td>
+                                    <td><div class="slds-truncate" title="{!fldPermission.PermissionsRead}">{!fldPermission.PermissionsRead}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        <lightning:tab aura:id = "tab3" tabindex="3" id="tab3" label="Profile Layouts">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                     <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Object Name : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="tableName" class="slds-select"  change="{!c.onTableNameChange}"/>-->
+                        <lightning:select aura:id="tableName" label ="Object Name :" name="selectItem" onchange="{!c.onTableNameChange}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.optionsList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Profile Name : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="layoutName" class="slds-select"  change="{!c.onLayoutNameChange}"/>-->
+                        <lightning:select aura:id="layoutName" label ="Profile Name :" name="profileItem" onchange="{!c.onLayoutNameChange}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.profileOptionList}" var="option">
+                                <option value="{!option.value}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    
+                    <lightning:layoutItem size="4">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onProfileLayouDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportProfileLayoutCsv}"/>
+                    </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="RecordTypeId">RecordTypeId</div></th>
+                                <th scope="col"><div class="slds-truncate" title="RecordType Name">RecordType Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Layout Name">Layout Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Object Name">Object Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="ProfileId">ProfileId</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Profile Name">Profile Name</div></th>
+                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.profileLayouts}" var="profileLayout">
+                                <tr>
+                                     <td><div class="slds-truncate" title="{!profileLayout.RecordTypeId}">{!profileLayout.RecordTypeId}</div></td>
+                                    <td><div class="slds-truncate" title="{!profileLayout.RecordType.Name}">{!profileLayout.RecordType.Name}</div></td>
+                                    <th scope="row"><div class="slds-truncate" title="{!profileLayout.Layout.Name}">{!profileLayout.Layout.Name}</div></th>
+                                    <td><div class="slds-truncate" title="{!profileLayout.Layout.TableEnumOrId}">{!profileLayout.Layout.TableEnumOrId}</div></td>
+                                    <td><div class="slds-truncate" title="{!profileLayout.ProfileId}">{!profileLayout.ProfileId}</div></td>
+                                    <td><div class="slds-truncate" title="{!profileLayout.Profile.Name}">{!profileLayout.Profile.Name}</div></td>
+                                                         
+                                
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        <lightning:tab aura:id = "tab4" tabindex="4" id="tab4" label="Workflow">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Select Object : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="objectNameWF" class="slds-select" change="{!c.onObjectChangeforWofkflow}"/>-->
+                        <lightning:select aura:id="objectNameWF" label ="Object Name :" name="selectItem" onchange="{!c.onObjectChangeforWofkflow}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.optionsList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onWorkFlowDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportWorkflowCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="WorkFlow ID">WorkFlow ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="WorkFlow Name">WorkFlow Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Manageable State">Manageable State</div></th>
+                                <!--th scope="col"><div class="slds-truncate" title="Namespace Prefix">Namespace Prefix</div></th-->
+                                <th scope="col"><div class="slds-truncate" title="Object Name">Object Name</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.worflows}" var="workflow">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!workflow.Id}">{!workflow.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!workflow.Name}">{!workflow.Name}</div></td>
+                                    <td><div class="slds-truncate" title="{!workflow.ManageableState}">{!workflow.ManageableState}</div></td>
+                                    <!--td><div class="slds-truncate" title="{!workflow.NamespacePrefix}">{!workflow.NamespacePrefix}</div></td-->
+                                    <td><div class="slds-truncate" title="{!workflow.TableEnumOrId}">{!workflow.TableEnumOrId}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        <lightning:tab aura:id = "tab5" tabindex="5" id="tab5" label="Validation Rule">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Select Object : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="objectNameVR" class="slds-select"  change="{!c.onObjectChangeforValidationR}"/>-->
+                        <lightning:select aura:id="objectNameVR" label ="Object Name :" name="selectItem" onchange="{!c.onObjectChangeforValidationR}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.optionsList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onValidationRuleDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportVRuleCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="ValidationRule ID">ValidationRule ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="ValidationRule Name">ValidationRule Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Active">Active</div></th>
+                                <!-- th scope="col"><div class="slds-truncate" title="Description">Description</div></th-->
+                                <th scope="col"><div class="slds-truncate" title="Error Display Field">Error Display Field</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Object">Object</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Error Message">Error Message</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.validationRules}" var="validationRule">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!validationRule.Id}">{!validationRule.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!validationRule.ValidationName}">{!validationRule.ValidationName}</div></td>
+                                    <td><div class="slds-truncate" title="{!validationRule.Active}">{!validationRule.Active}</div></td>
+                                    <!--td><div class="slds-truncate" title="{!validationRule.Description}">{!validationRule.Description}</div></td -->
+                                    <td><div class="slds-truncate" title="{!validationRule.ErrorDisplayField}">{!validationRule.ErrorDisplayField}</div></td>
+                                    <td><div class="slds-truncate" title="{!validationRule.EntityDefinition.QualifiedApiName}">{!validationRule.EntityDefinition.QualifiedApiName}</div></td>
+                                    <td><div class="slds-truncate" title="{!validationRule.ErrorMessage}">{!validationRule.ErrorMessage}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>        
+        
+        <lightning:tab aura:id = "tab6" tabindex="6" id="tab6" label="Buttons">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Select Object : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    
+                        <lightning:select aura:id="objectNameButton" label ="Object Name :" name="selectItem" onchange="{!c.onObjectChangeforButton}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.optionsList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onButtonDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportButtonCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="Button ID">Button ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Button Name">Button Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Object Name">Object Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Display Type">Display Type</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Link Type">Link Type</div></th>
+                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.customButtons}" var="vButton">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!vButton.Id}">{!vButton.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!vButton.Name}">{!vButton.Name}</div></td>
+                                    <td><div class="slds-truncate" title="{!vButton.PageOrSobjectType}">{!vButton.PageOrSobjectType}</div></td>
+                                    <td><div class="slds-truncate" title="{!vButton.DisplayType}">{!vButton.DisplayType}</div></td>
+                                    <td><div class="slds-truncate" title="{!vButton.LinkType}">{!vButton.LinkType}</div></td>
+                                    
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>   
+        <lightning:tab aura:id = "tab7" tabindex="7" id="tab7" label="VisualForce Pages">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Select Object : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    
+                        <lightning:select aura:id="objectNameVF" label ="Object Name :" name="selectItem" onchange="{!c.onObjectChangeforVF}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.optionsList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onVFDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportVFCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="VisualForce Page Name">Page Name</div></th>
+                                
+                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.apexPages}" var="vfPage">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!vfPage}">{!vfPage}</div></th>
+                                
+                                    
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab> 
+        
+        
+        <lightning:tab aura:id = "tab8" tabindex="8" id="tab8" label="Reports">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	</lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                        <lightning:select aura:id="report" label ="Folder Name :" name="selectItem" onchange="{!c.onFolderChangeforReport}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.folderList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onReportDisplay}"/>
+                        <lightning:button variant="brand" label="Export" title="Base action" onclick="{!c.exportReportCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="Report ID">Report ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Report Name">Report Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Folder Name">Folder Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Object Name">Object Name</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.reportData}" var="rData">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!rData.Id}">{!rData.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!rData.name}">{!rData.name}</div></td>
+                                    <td><div class="slds-truncate" title="{!rData.folderName}">{!rData.folderName}</div></td>
+                                    <td><div class="slds-truncate" title="{!rData.objectName}">{!rData.objectName}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        <lightning:tab aura:id = "tab9" tabindex="9" id="tab9" label="Dashboards">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	</lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                        <lightning:select aura:id="dashboard" label ="Folder Name :" name="selectItem" onchange="{!c.onFolderChangeforDashboard}">
+                            <option value="--None--" text="--None--"/>
+                            <option value="--All--" text="--All--"/>
+                            <aura:iteration items="{!v.dashboardFolderList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onDashboardDisplay}"/>
+                        <lightning:button variant="brand" label="Export" title="Base action" onclick="{!c.exportDashboardCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="Dashboard ID">Dashboard ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Dashboard Name">Dashboard Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Folder Name">Folder Name</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.dashboardData}" var="dData">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!dData.Id}">{!dData.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!dData.name}">{!dData.DeveloperName}</div></td>
+                                    <td><div class="slds-truncate" title="{!dData.FolderName}">{!dData.FolderName}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        <lightning:tab aura:id = "tab10" tabindex="10" id="tab10" label="Process Builder">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="4">
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                            <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onProcessBuilderDisplay}"/>
+                            <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportProcessBuilderCsv}"/>
+                        </div>
+                    </lightning:layoutItem>   
+                    <lightning:layoutItem size="4">
+                    </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="ProcessBuilder Id">ProcessBuilder Id</div></th>
+                                <!-- th scope="col"><div class="slds-truncate" title="ActiveVersion">ActiveVersion</div></th -->
+                                <th scope="col"><div class="slds-truncate" title="LatestVersion">LatestVersion</div></th>
+                                <th scope="col"><div class="slds-truncate" title="ProcessBuilder Name">ProcessBuilder Name</div></th> 
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.processBuilders}" var="processBuilder">
+                                <tr>
+                                    <td><div class="slds-truncate" title="{!processBuilder.Id}">{!processBuilder.Id}</div></td>
+                                    <!-- td><div class="slds-truncate" title="{!processBuilder.ActiveVersion}">{!processBuilder.ActiveVersion == null ? 'In Active' : processBuilder.ActiveVersion.VersionNumber}</div></td -->
+                                    <th scope="row"><div class="slds-truncate" title="{!processBuilder.LatestVersion}">{!processBuilder.LatestVersion.VersionNumber}</div></th>
+                                    <td><div class="slds-truncate" title="{!processBuilder.DeveloperName}">{!processBuilder.DeveloperName}</div></td>
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab>
+        
+        <lightning:tab aura:id = "tab11" tabindex="11" id="tab11" label="Groups">
+            <div class="slds-form-element">
+                <lightning:layout horizontalAlign="center">
+                    <lightning:layoutItem size="1">
+                	<!--<label class="slds-form-element__label" for="select-01">Select Object : </label>-->
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3">
+                    <!--<ui:inputSelect aura:id="objectNameVR" class="slds-select"  change="{!c.onObjectChangeforValidationR}"/>-->
+                        <lightning:select aura:id="groupName" label ="Group Name :" name="selectItem" onchange="{!c.onNameChangeforGroup}">
+                            <option value="--None--" text="--None--"/>
+                            <aura:iteration items="{!v.groupNameList}" var="option">
+                                <option value="{!option.label}" text="{!option.value}" >
+                                </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="8">
+                        <div style="margin-top: 22px; margin-left: 10px;">
+                        <lightning:button variant="brand" label="Display" title="Display action" onclick="{!c.onGroupDisplay}"/>
+                        <lightning:button variant="brand" disabled="{!v.isDisabled}" label="Export" title="Base action" onclick="{!c.exportGroupUsersCsv }"/>
+                        </div>
+                        </lightning:layoutItem>
+                </lightning:layout>
+                </div>
+            <br/>
+            <div class="slds">
+                <div class="slds-scrollable--y">
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                        <thead>
+                            <tr class="slds-text-heading_label">
+                                <th scope="col"><div class="slds-truncate" title="User ID">User ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="User Name">User Name</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Active">Active</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Role Name">Role</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Profile Name">Profile</div></th>                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Use the Apex model and controller to fetch server side data -->
+                            <aura:iteration items="{!v.groupUserData}" var="user">
+                                <tr>
+                                    <th scope="row"><div class="slds-truncate" title="{!user.Id}">{!user.Id}</div></th>
+                                    <td><div class="slds-truncate" title="{!user.Name}"><a href="{!'/'+user.Id}" target="_blank">{!user.Name}</a></div></td>
+                                    <td><div class="slds-truncate" title="{!user.IsActive}"></div>{!user.IsActive}</td>
+                                    <td><div class="slds-truncate" title="{!user.UserRole.Name}">{!user.UserRole.Name}</div></td> 
+                                    <td><div class="slds-truncate" title="{!user.Profile.Name}">{!user.Profile.Name}</div></td>                                    
+                                </tr>
+                            </aura:iteration>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </lightning:tab> 
+    </lightning:tabset>
+</aura:component>
